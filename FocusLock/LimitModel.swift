@@ -43,6 +43,13 @@ final class LimitModel: ObservableObject {
             || selection.webDomainTokens != savedSelection.webDomainTokens
     }
 
+    /// Saving a higher allowance than the stored one needs the longer challenge.
+    /// Compared with the stored value even while the limit is off, so turning it
+    /// off and back on with more minutes isn't a shortcut.
+    var isRaisingLimit: Bool {
+        limitMinutes > savedLimitMinutes
+    }
+
     func requestAuthorization() async {
         do {
             try await AuthorizationCenter.shared.requestAuthorization(for: .individual)

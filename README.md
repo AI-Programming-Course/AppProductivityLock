@@ -56,6 +56,8 @@ Tip for testing: set the allowance to 5 minutes, use one of the apps, and it sho
 - The day runs 00:00–23:59, and the block lifts at midnight.
 - Time already spent today counts, so changing the selection or restarting the limit doesn't
   give you a fresh 30 minutes, and saving changes while blocked keeps you blocked.
+- Lowering the allowance is instant. Raising it above the saved value (30 min to start with)
+  asks six of the same math questions before it's saved, even while the limit is off.
 - Turning the limit off asks three two-digit addition or subtraction questions first. Get
   all three right and the block is removed right away; get one wrong and you start over with
   new questions.

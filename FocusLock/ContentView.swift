@@ -7,6 +7,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var showPicker = false
     @State private var showUnlockChallenge = false
+    @State private var showRaiseChallenge = false
 
     private let ticker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
@@ -112,7 +113,11 @@ struct ContentView: View {
 
             Section {
                 Button(model.isActive ? "Save changes" : "Start daily limit") {
-                    model.start()
+                    if model.isRaisingLimit {
+                        showRaiseChallenge = true
+                    } else {
+                        model.start()
+                    }
                 }
                 .disabled(model.selectedCount == 0 || (model.isActive && !model.hasUnsavedChanges))
 
@@ -128,14 +133,24 @@ struct ContentView: View {
                     }
                 }
             } footer: {
-                if model.isActive && model.hasUnsavedChanges {
+                if model.isRaisingLimit {
+                    Text("Raising the allowance takes 6 math questions.")
+                        .foregroundStyle(.orange)
+                } else if model.isActive && model.hasUnsavedChanges {
                     Text("You have unsaved changes. They take effect when you tap Save changes.")
                         .foregroundStyle(.orange)
                 }
             }
         }
         .sheet(isPresented: $showUnlockChallenge) {
-            UnlockChallengeView { model.stop() }
+            MathChallengeView(questionCount: 3, actionTitle: "Turn off limit") {
+                model.stop()
+            }
+        }
+        .sheet(isPresented: $showRaiseChallenge) {
+            MathChallengeView(questionCount: 6, actionTitle: "Raise allowance") {
+                model.start()
+            }
         }
     }
 

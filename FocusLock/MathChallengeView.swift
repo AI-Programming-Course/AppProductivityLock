@@ -1,15 +1,26 @@
 import SwiftUI
 
-/// Friction before turning the limit off: three two-digit addition or
-/// subtraction questions, all of which must be answered correctly.
-struct UnlockChallengeView: View {
-    let onUnlock: () -> Void
+/// Friction before loosening the limit: two-digit addition or subtraction
+/// questions, all of which must be answered correctly.
+struct MathChallengeView: View {
+    let questionCount: Int
+    /// Label of the confirm button, e.g. "Turn off limit".
+    let actionTitle: String
+    let onSuccess: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var questions = Question.makeSet()
-    @State private var answers = ["", "", ""]
+    @State private var questions: [Question]
+    @State private var answers: [String]
     @State private var gotOneWrong = false
     @FocusState private var focusedIndex: Int?
+
+    init(questionCount: Int, actionTitle: String, onSuccess: @escaping () -> Void) {
+        self.questionCount = questionCount
+        self.actionTitle = actionTitle
+        self.onSuccess = onSuccess
+        _questions = State(initialValue: Question.makeSet(count: questionCount))
+        _answers = State(initialValue: Array(repeating: "", count: questionCount))
+    }
 
     var body: some View {
         NavigationStack {
@@ -35,12 +46,12 @@ struct UnlockChallengeView: View {
                         Text("Not quite. Here are new questions.")
                             .foregroundStyle(.red)
                     } else {
-                        Text("Answer all three correctly to turn off the limit.")
+                        Text("Answer all \(questionCount) correctly to continue.")
                     }
                 }
 
                 Section {
-                    Button("Turn off limit", role: .destructive) {
+                    Button(actionTitle, role: .destructive) {
                         check()
                     }
                     .disabled(answers.contains { $0.isEmpty })
@@ -63,11 +74,11 @@ struct UnlockChallengeView: View {
         }
         if allCorrect {
             dismiss()
-            onUnlock()
+            onSuccess()
         } else {
             // A wrong answer means starting over with fresh questions.
-            questions = Question.makeSet()
-            answers = ["", "", ""]
+            questions = Question.makeSet(count: questionCount)
+            answers = Array(repeating: "", count: questionCount)
             gotOneWrong = true
             focusedIndex = 0
         }
@@ -82,8 +93,8 @@ private struct Question {
     var text: String { "\(left) \(isAddition ? "+" : "−") \(right) =" }
     var answer: Int { isAddition ? left + right : left - right }
 
-    static func makeSet() -> [Question] {
-        (0..<3).map { _ in random() }
+    static func makeSet(count: Int) -> [Question] {
+        (0..<count).map { _ in random() }
     }
 
     /// Two-digit operands; subtraction never goes below zero, so the number pad is enough.
