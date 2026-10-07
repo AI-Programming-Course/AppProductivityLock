@@ -19,16 +19,16 @@ It uses Apple's Screen Time API:
 ## Requirements
 
 - A Mac with Xcode 15.3+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
-- A **real iPhone** on iOS 17+ (Screen Time doesn't work properly in the Simulator)
+- A **real iPhone** on iOS 17.4+ (Screen Time doesn't work properly in the Simulator)
 - An Apple Developer account. Family Controls works for development builds. For
   TestFlight or the App Store you must
   [request the distribution entitlement](https://developer.apple.com/contact/request/family-controls-distribution).
 
 ## Setup
 
-1. Replace `com.example.focuslock` with your own prefix (e.g. `com.yourname.focuslock`) in
-   `project.yml` **and** `Shared/SharedStore.swift`. This changes the bundle IDs and the App Group.
-2. In `project.yml`, set `DEVELOPMENT_TEAM` to your Team ID (Xcode → Settings → Accounts).
+1. At the top of `project.yml`, set `BUNDLE_PREFIX` to your own ID (e.g. `com.yourname.focuslock`).
+   The bundle IDs and the App Group (`group.<BUNDLE_PREFIX>`) are derived from it.
+2. In the same place, set `DEVELOPMENT_TEAM` to your Team ID (Xcode → Settings → Accounts).
 3. Generate and open the project:
    ```sh
    xcodegen generate
@@ -37,6 +37,10 @@ It uses Apple's Screen Time API:
 4. For each of the 3 targets, check **Signing & Capabilities**: your team should be selected
    and *Family Controls* plus *App Groups* should be listed. Let Xcode register them if it asks.
 5. Plug in your iPhone, select it, and press **Run**.
+
+Make any project changes in `project.yml`, not in Xcode's settings screens: Info.plist and the
+entitlements are regenerated every time you run `xcodegen generate`. If the app shows
+"Setup problem: the App Group isn't available", step 1, 2 or 4 is wrong.
 
 ## Using it
 
@@ -50,7 +54,7 @@ Tip for testing: set the allowance to 5 minutes, use one of the apps, and it sho
 
 - The 30 minutes is **combined** across all selected apps, not per app.
 - The day runs 00:00–23:59, and the block lifts at midnight.
-- On iOS 17.4+ time already spent today counts, so stopping and restarting the limit doesn't
-  give you a fresh 30 minutes.
+- Time already spent today counts, so changing the selection or restarting the limit doesn't
+  give you a fresh 30 minutes, and saving changes while blocked keeps you blocked.
 - Turning the limit off from the app removes the block right away. Opal-style "hard mode"
   (no way out) would be a later addition.

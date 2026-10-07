@@ -1,14 +1,16 @@
 # Generate the Xcode project with:  xcodegen generate
-# Before generating, replace "com.example.focuslock" everywhere (here and in
-# Shared/SharedStore.swift) with your own reverse-DNS prefix, and set DEVELOPMENT_TEAM.
+# Before generating, set the two values below. Everything else (bundle IDs, the
+# App Group, the entitlements) is derived from them.
+# Make all changes here, not in Xcode: Info.plist and entitlements are regenerated.
 name: FocusLock
 options:
-  bundleIdPrefix: com.example.focuslock
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "17.4"
 settings:
   base:
-    DEVELOPMENT_TEAM: ""
+    BUNDLE_PREFIX: com.example.focuslock   # <- your own reverse-DNS ID
+    DEVELOPMENT_TEAM: ""                   # <- your Apple Team ID
+    APP_GROUP_ID: group.$(BUNDLE_PREFIX)
     SWIFT_VERSION: "5.9"
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
@@ -23,16 +25,17 @@ targets:
       path: FocusLock/Info.plist
       properties:
         CFBundleDisplayName: FocusLock
+        AppGroupID: $(APP_GROUP_ID)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
     entitlements:
       path: FocusLock/FocusLock.entitlements
       properties:
         com.apple.developer.family-controls: true
-        com.apple.security.application-groups: [group.com.example.focuslock]
+        com.apple.security.application-groups: [$(APP_GROUP_ID)]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_PREFIX)
     dependencies:
       - target: ActivityMonitor
       - target: ShieldConfig
@@ -46,6 +49,7 @@ targets:
       path: ActivityMonitor/Info.plist
       properties:
         CFBundleDisplayName: ActivityMonitor
+        AppGroupID: $(APP_GROUP_ID)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.deviceactivity.monitor-extension
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).DeviceActivityMonitorExtension
@@ -53,10 +57,10 @@ targets:
       path: ActivityMonitor/ActivityMonitor.entitlements
       properties:
         com.apple.developer.family-controls: true
-        com.apple.security.application-groups: [group.com.example.focuslock]
+        com.apple.security.application-groups: [$(APP_GROUP_ID)]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.ActivityMonitor
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_PREFIX).ActivityMonitor
 
   # Draws the screen you see when opening a blocked app.
   ShieldConfig:
@@ -74,7 +78,7 @@ targets:
       path: ShieldConfig/ShieldConfig.entitlements
       properties:
         com.apple.developer.family-controls: true
-        com.apple.security.application-groups: [group.com.example.focuslock]
+        com.apple.security.application-groups: [$(APP_GROUP_ID)]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.ShieldConfig
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_PREFIX).ShieldConfig

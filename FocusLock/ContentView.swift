@@ -1,10 +1,13 @@
 import FamilyControls
+import ManagedSettings
 import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var model: LimitModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var showPicker = false
+
+    private let ticker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationStack {
@@ -19,6 +22,10 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { model.refresh() }
+        }
+        // Picks up a limit reached while the app is open.
+        .onReceive(ticker) { _ in
+            if scenePhase == .active { model.refresh() }
         }
         .alert("Something went wrong", isPresented: Binding(
             get: { model.errorMessage != nil },
@@ -51,6 +58,15 @@ struct ContentView: View {
 
     private var limitForm: some View {
         Form {
+            if !model.isAppGroupAvailable {
+                Section {
+                    Label("Setup problem: the App Group isn't available, so limits can't work.", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                } footer: {
+                    Text("In project.yml, check BUNDLE_PREFIX and DEVELOPMENT_TEAM, run xcodegen generate, and make sure App Groups is enabled for FocusLock and ActivityMonitor under Signing & Capabilities.")
+                }
+            }
+
             Section {
                 statusRow
             }
@@ -67,6 +83,16 @@ struct ContentView: View {
                     }
                 }
                 .familyActivityPicker(isPresented: $showPicker, selection: $model.selection)
+
+                ForEach(Array(model.selection.categoryTokens), id: \.self) { token in
+                    Label(token)
+                }
+                ForEach(Array(model.selection.applicationTokens), id: \.self) { token in
+                    Label(token)
+                }
+                ForEach(Array(model.selection.webDomainTokens), id: \.self) { token in
+                    Label(token)
+                }
             }
 
             Section {
@@ -87,12 +113,23 @@ struct ContentView: View {
                 Button(model.isActive ? "Save changes" : "Start daily limit") {
                     model.start()
                 }
-                .disabled(model.selectedCount == 0)
+                .disabled(model.selectedCount == 0 || (model.isActive && !model.hasUnsavedChanges))
+
+                if model.hasUnsavedChanges {
+                    Button("Discard changes") {
+                        model.discardChanges()
+                    }
+                }
 
                 if model.isActive {
                     Button("Turn off limit", role: .destructive) {
                         model.stop()
                     }
+                }
+            } footer: {
+                if model.isActive && model.hasUnsavedChanges {
+                    Text("You have unsaved changes. They take effect when you tap Save changes.")
+                        .foregroundStyle(.orange)
                 }
             }
         }

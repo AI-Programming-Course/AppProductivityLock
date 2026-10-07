@@ -11,18 +11,36 @@ final class LimitModel: ObservableObject {
     @Published private(set) var isAuthorized: Bool
     @Published var errorMessage: String?
 
+    let isAppGroupAvailable = SharedConfig.isAppGroupAvailable
+
+    /// What's currently stored and being monitored, to detect unsaved edits.
+    private var savedSelection: FamilyActivitySelection
+    private var savedLimitMinutes: Int
+
     private let center = DeviceActivityCenter()
 
     init() {
-        selection = SharedStore.selection
-        limitMinutes = SharedStore.limitMinutes
+        let selection = SharedStore.selection
+        let limitMinutes = SharedStore.limitMinutes
+        self.selection = selection
+        self.limitMinutes = limitMinutes
+        savedSelection = selection
+        savedLimitMinutes = limitMinutes
         isActive = SharedStore.isActive
         isBlockedToday = SharedStore.isBlockedToday
         isAuthorized = AuthorizationCenter.shared.authorizationStatus == .approved
+        refresh()
     }
 
     var selectedCount: Int {
         selection.applicationTokens.count + selection.categoryTokens.count + selection.webDomainTokens.count
+    }
+
+    var hasUnsavedChanges: Bool {
+        limitMinutes != savedLimitMinutes
+            || selection.applicationTokens != savedSelection.applicationTokens
+            || selection.categoryTokens != savedSelection.categoryTokens
+            || selection.webDomainTokens != savedSelection.webDomainTokens
     }
 
     func requestAuthorization() async {
@@ -36,6 +54,9 @@ final class LimitModel: ObservableObject {
 
     func refresh() {
         isAuthorized = AuthorizationCenter.shared.authorizationStatus == .approved
+        if isActive {
+            SharedStore.resetIfNewDay()
+        }
         isBlockedToday = SharedStore.isBlockedToday
     }
 
@@ -50,36 +71,28 @@ final class LimitModel: ObservableObject {
 
         // One schedule covering the whole day, repeating every day.
         let schedule = DeviceActivitySchedule(
-            intervalStart: DateComponents(hour: 0, minute: 0),
-            intervalEnd: DateComponents(hour: 23, minute: 59),
+            intervalStart: DateComponents(hour: 0, minute: 0, second: 0),
+            intervalEnd: DateComponents(hour: 23, minute: 59, second: 59),
             repeats: true
         )
-        let threshold = DateComponents(minute: limitMinutes)
-        let event: DeviceActivityEvent
-        if #available(iOS 17.4, *) {
-            // Count time already spent today, so restarting doesn't reset the allowance.
-            event = DeviceActivityEvent(
-                applications: selection.applicationTokens,
-                categories: selection.categoryTokens,
-                webDomains: selection.webDomainTokens,
-                threshold: threshold,
-                includesPastActivity: true
-            )
-        } else {
-            event = DeviceActivityEvent(
-                applications: selection.applicationTokens,
-                categories: selection.categoryTokens,
-                webDomains: selection.webDomainTokens,
-                threshold: threshold
-            )
-        }
+        // Count time already spent today, so restarting doesn't reset the allowance.
+        let event = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            webDomains: selection.webDomainTokens,
+            threshold: DateComponents(minute: limitMinutes),
+            includesPastActivity: true
+        )
 
         do {
             center.stopMonitoring([.daily])
             try center.startMonitoring(.daily, during: schedule, events: [.limitReached: event])
             SharedStore.isActive = true
             isActive = true
+            savedSelection = selection
+            savedLimitMinutes = limitMinutes
             // If the limit was already hit today, keep the new selection blocked.
+            // The extension does the same when monitoring restarts.
             if SharedStore.isBlockedToday {
                 Shield.apply(selection)
             }
@@ -96,5 +109,10 @@ final class LimitModel: ObservableObject {
         SharedStore.blockedOn = nil
         isActive = false
         refresh()
+    }
+
+    func discardChanges() {
+        selection = savedSelection
+        limitMinutes = savedLimitMinutes
     }
 }

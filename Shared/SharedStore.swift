@@ -3,10 +3,18 @@ import FamilyControls
 import Foundation
 import ManagedSettings
 
-/// Must match the App Group in project.yml.
 enum SharedConfig {
-    static let appGroup = "group.com.example.focuslock"
+    /// Read from Info.plist, where project.yml sets it from APP_GROUP_ID.
+    static let appGroup = Bundle.main.object(forInfoDictionaryKey: "AppGroupID") as? String ?? ""
     static let defaultLimitMinutes = 30
+
+    /// False when the App Group is missing from the entitlements or not registered
+    /// with Apple. The app and the monitor extension then can't share settings, so
+    /// nothing would ever get blocked.
+    static var isAppGroupAvailable: Bool {
+        !appGroup.isEmpty
+            && FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup) != nil
+    }
 }
 
 extension DeviceActivityName {
@@ -23,6 +31,8 @@ extension ManagedSettingsStore.Name {
 
 /// State shared between the app and the monitor extension via the App Group.
 enum SharedStore {
+    // Falls back to private storage only so the app can still launch and report
+    // the setup problem (see SharedConfig.isAppGroupAvailable).
     private static let defaults = UserDefaults(suiteName: SharedConfig.appGroup) ?? .standard
 
     private enum Key {
@@ -64,6 +74,18 @@ enum SharedStore {
     static var isBlockedToday: Bool {
         guard let blockedOn else { return false }
         return Calendar.current.isDateInToday(blockedOn)
+    }
+
+    /// Lifts a block left over from a previous day; keeps today's block in place.
+    /// Called at the start of each day and whenever the app opens, since iOS
+    /// doesn't guarantee it wakes the extension at midnight.
+    static func resetIfNewDay() {
+        if isBlockedToday {
+            Shield.apply(selection)
+        } else {
+            Shield.clear()
+            blockedOn = nil
+        }
     }
 }
 

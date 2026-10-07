@@ -3,19 +3,13 @@ import DeviceActivity
 import ManagedSettings
 
 /// iOS calls this in the background:
-/// - at midnight (interval start) we lift yesterday's block,
+/// - when a day's interval starts (midnight, or when the app restarts monitoring)
+///   we lift any block from a previous day but keep today's,
 /// - when today's usage of the selected apps hits the limit we block them.
 final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
-        Shield.clear()
-        SharedStore.blockedOn = nil
-    }
-
-    override func intervalDidEnd(for activity: DeviceActivityName) {
-        super.intervalDidEnd(for: activity)
-        Shield.clear()
-        SharedStore.blockedOn = nil
+        SharedStore.resetIfNewDay()
     }
 
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
