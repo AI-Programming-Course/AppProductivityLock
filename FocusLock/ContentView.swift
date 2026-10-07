@@ -6,6 +6,7 @@ struct ContentView: View {
     @EnvironmentObject private var model: LimitModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var showPicker = false
+    @State private var showUnlockChallenge = false
 
     private let ticker = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
@@ -123,7 +124,7 @@ struct ContentView: View {
 
                 if model.isActive {
                     Button("Turn off limit", role: .destructive) {
-                        model.stop()
+                        showUnlockChallenge = true
                     }
                 }
             } footer: {
@@ -132,6 +133,9 @@ struct ContentView: View {
                         .foregroundStyle(.orange)
                 }
             }
+        }
+        .sheet(isPresented: $showUnlockChallenge) {
+            UnlockChallengeView { model.stop() }
         }
     }
 
